@@ -3,7 +3,6 @@
 ###################################################
 
 # Declaración de variables
-# Declaración de variables
 # Utilizamos {} para la declaración de variables que son diccionarios
 vacia = {}
 frutas = {"NA":"naranja", "LI":"limón", "PO":"pomelo", "LM":"lima", "MA":"mandarina"}
