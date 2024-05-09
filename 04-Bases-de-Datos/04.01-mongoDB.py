@@ -265,31 +265,31 @@ class Customer:
 ###################################################
 
 # Insertamos partiendo de la clase Customer
-#cliente = Customer("DEMO1", "Empresa Uno, SL", "Alejandro", "Gerente", "Calle Uno, S/N", "Granada", "Granada", "18195", "España", "900100100", "900100200")
+cliente = Customer("DEMO1", "Empresa Uno, SL", "Alejandro", "Gerente", "Calle Uno, S/N", "Granada", "Granada", "18195", "España", "900100100", "900100200")
 
 # Todos los objetos de python tienen una propiedad que es __dict__
 # que retorna un diccionario de todas sis variables
-#pprint(cliente.__dict__)
+pprint(cliente.__dict__)
 
-#id = coleccionClientes.insert_one(cliente.__dict__).inserted_id
-#print(f"ID del nuevo documento: {id}")
+id = coleccionClientes.insert_one(cliente.__dict__).inserted_id
+print(f"ID del nuevo documento: {id}")
 
 # Insertamos partiendo de un diccionario
-#cliente2 = {
-#    "CustomerID": "DEMO2",
-#    "CompanyName": "Empresa Dos, SL",
-#    "ContactName": "Borja Cabeza",
-#    "ContactTitle": "Gerente",
-#    "Address": "Calle Dos S/N",
-#    "City": "Madrid",
-#    "Region": "Madrid",
-#    "PostalCode": "28019",
-#    "Country": "España",
-#    "Phone": "910 101 102",
-#    "Fax": "910 101 103"}
+cliente2 = {
+    "CustomerID": "DEMO2",
+    "CompanyName": "Empresa Dos, SL",
+    "ContactName": "Borja Cabeza",
+    "ContactTitle": "Gerente",
+    "Address": "Calle Dos S/N",
+    "City": "Madrid",
+    "Region": "Madrid",
+    "PostalCode": "28019",
+    "Country": "España",
+    "Phone": "910 101 102",
+    "Fax": "910 101 103"}
 
-#id = coleccionClientes.insert_one(cliente2).inserted_id
-#print(f"ID del nuevo documento: {id}")
+id = coleccionClientes.insert_one(cliente2).inserted_id
+print(f"ID del nuevo documento: {id}")
 
 ###################################################
 # Actualizar documentos                           #
@@ -318,3 +318,17 @@ print(f"{result.modified_count} documentos modificados")
 print(result)
 
 pprint(coleccionClientes.find_one(query))
+
+###################################################
+# Eliminar documentos                             #
+###################################################
+
+# Eliminar el primer documento coincide con el filtro de búsqueda
+result = coleccionClientes.delete_one({"CustomerID": "DEMO2"})
+print(result)
+print(f"{result.deleted_count} documentos eliminados.")
+
+# Eliminar todos los documentos coincidentes con el filtro de búsqueda
+result = coleccionClientes.delete_many({"CustomerID": "DEMO2"})
+print(result)
+print(f"{result.deleted_count} documentos eliminados.")
