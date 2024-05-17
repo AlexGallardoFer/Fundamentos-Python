@@ -1,11 +1,12 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, Response, jsonify, session
+from XMLModulo import *
 import pymssql
 
 #########################################################################
 # Creamos una instancia de Flask
 #########################################################################
 app = Flask(__name__, template_folder="templates")
-
+app.secret_key = b"5s2%_5d3'$$ds92xDS5s"
 
 #########################################################################
 # Rutas de la aplicación Flask
@@ -16,7 +17,7 @@ app = Flask(__name__, template_folder="templates")
 @app.route("/api/products", methods=["GET"])
 def products_get():
     try:
-        categoria = request.args.get("categoria", None) 
+        categoria = request.args.get("categoria", None)
 
         connection = pymssql.connect(
             server="hostdb2-eoi.database.windows.net",
@@ -26,12 +27,23 @@ def products_get():
             database="Northwind")
 
         cursor = connection.cursor(as_dict=True)
-        if categoria != None:
+        
+        if (categoria != None):
             cursor.execute(f"SELECT * FROM dbo.Products WHERE CategoryID = {categoria}")
         else:
             cursor.execute("SELECT * FROM dbo.Products")
 
-        return jsonify(cursor.fetchall()), 200
+        if (session["response_type"] == "xml"):
+            xml = "<products>"
+            for item in cursor.fetchall():
+                    xml += dict_to_xml(item, "product")
+
+            xml += "</products>"
+            response = Response(xml, status=200, content_type="application/xml")
+
+            return response
+        else:
+            return jsonify(cursor.fetchall()), 200
     except Exception as err:
         return jsonify(err), 500
 
@@ -52,7 +64,13 @@ def product_get(id):
             cursor = connection.cursor(as_dict=True)
             cursor.execute(f"SELECT * FROM dbo.Products WHERE ProductID = {id}")
 
-            return jsonify(cursor.fetchone()), 200
+            if (session["response_type"] == "xml"):
+                xml = dict_to_xml(cursor.fetchone(), "product")
+                response = Response(xml, status=200, content_type="application/xml")
+
+                return response
+            else:
+                return jsonify(cursor.fetchone()), 200
         else:
             return jsonify({"Message": "La referencia del producto no es valida."}), 400
     except Exception as err:
@@ -74,6 +92,31 @@ def products_post():
 
         cursor = connection.cursor(as_dict=True)
 
+        # command = f"""
+        #     DECLARE @NewID INT;
+
+        #     INSERT INTO dbo.Products(ProductName, CategoryID, Discontinued, SupplierID,
+        #         ReorderLevel, QuantityPerUnit, UnitsInStock, UnitsOnOrder, UnitPrice) VALUES (
+        #         '{new_product["ProductName"]}',
+        #         {new_product["CategoryID"]},
+        #         '{new_product["Discontinued"]}',
+        #         {new_product["SupplierID"]},
+        #         {new_product["ReorderLevel"]},
+        #         '{new_product["QuantityPerUnit"]}',
+        #         {new_product["UnitsInStock"]},
+        #         {new_product["UnitsOnOrder"]},
+        #         {new_product["UnitPrice"]});
+            
+        #     SET @NewID = SCOPE_IDENTITY();
+
+        #     SELECT * FROM dbo.Products WHERE ProductID = @NewID
+        # """
+
+        # cursor.execute(command)
+        # connection.commit()
+
+        # return jsonify(cursor.fetchone()), 201
+    
         command = f"""
             INSERT INTO dbo.Products(ProductName, CategoryID, Discontinued, SupplierID,
                 ReorderLevel, QuantityPerUnit, UnitsInStock, UnitsOnOrder, UnitPrice) VALUES (
@@ -85,14 +128,17 @@ def products_post():
                 '{new_product["QuantityPerUnit"]}',
                 {new_product["UnitsInStock"]},
                 {new_product["UnitsOnOrder"]},
-                {new_product["UnitPrice"]})
+                {new_product["UnitPrice"]});
         """
 
         cursor.execute(command)
         connection.commit()    
 
         if(cursor.rowcount == 1):
-            return jsonify(new_product), 201
+            id = cursor.lastrowid
+            cursor.execute(f"SELECT * FROM dbo.Products WHERE ProductID = {id}")
+
+            return jsonify(cursor.fetchone()), 201
         else:
             return jsonify({"Message": "Producto no insertado."}), 400
     except Exception as err:
@@ -169,11 +215,16 @@ def products_delete(id):
 #########################################################################
 # Funciones que se ejecutan en todas las peticiones
 #########################################################################
+
 @app.before_request
 def verificar_apikey():
     apikey = request.headers.get("Authorization", None)
-    if apikey != "8aaWPy5SzLubp9ApRQbZkWkHA6PFZ33n":
-        return jsonify({"Message": "Acceso no autorizado"}), 401
+    if (apikey != "8aaWPy5SzLubp9ApRQbZkWkHA6PFZ33n"):
+        return jsonify({"Message" : "Acceso no autorizado"}), 401
+
+@app.before_request
+def get_type_response():
+    session["response_type"] = request.args.get("rt", "json").lower()
 
 
 #########################################################################
